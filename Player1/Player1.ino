@@ -11,35 +11,27 @@ const uint64_t pipes[2] = { 0xF0F0F0F0D2LL, 0xF0F0F0F0E1LL };
 
 String selectedCard, selectedTip;
 
-/*
-   Build a package with origin `radioId` and a `target`,
-   where a request will be taken through a protocol `protocolId`
-*/
-String buildPackage(String request, String target) {
-  return radioId + target + request + protocolId;
-}
+void setup() {
+  Serial.begin(115200);
 
-/*
-   Radio sends a packet
-*/
-void sendPackage(String package) {
-  radio.stopListening(); /* Stop listening, then messages can be sent */
-
-  Serial.print("**** P1 is sending the packet: ");
-  Serial.println(package);
-  delay(500);
-
-  radio.startWrite(package.c_str(), package.length(), false); /* write packet */
-  delay(500);
+  radio.begin();
+  radio.setPALevel(RF24_PA_LOW);
+  radio.setAutoAck(false);
+  radio.setChannel(1);
+  radio.openWritingPipe(pipes[0]);
+  radio.openReadingPipe(1, pipes[1]);
   radio.startListening();
-  delay(1000);
+}
+
+void loop() {
+  managePackets();
+  delay(5000);
 }
 
 /*
-   Checks if it has packets to route, if so,
-   forwards them to the destination
+   Manages the received packets
 */
-void routePackage() {
+void managePackets() {
   radio.startListening();
   delay(100);
 
@@ -114,6 +106,14 @@ void routePackage() {
 }
 
 /*
+   Build a package with origin `radioId` and a `target`,
+   where a content will be taken through a protocol `protocolId`
+*/
+String buildPackage(String content, String target) {
+  return radioId + target + content + protocolId;
+}
+
+/*
    Check for interference in the channel
 */
 void checkForInterference() {
@@ -124,19 +124,18 @@ void checkForInterference() {
   } while (radio.testCarrier());
 }
 
-void setup() {
-  Serial.begin(115200);
+/*
+   Radio sends a packet
+*/
+void sendPackage(String package) {
+  radio.stopListening(); /* Stop listening, then messages can be sent */
 
-  radio.begin();
-  radio.setPALevel(RF24_PA_LOW);
-  radio.setAutoAck(false);
-  radio.setChannel(1);
-  radio.openWritingPipe(pipes[0]);
-  radio.openReadingPipe(1, pipes[1]);
+  Serial.print("**** P1 is sending the packet: ");
+  Serial.println(package);
+  delay(500);
+
+  radio.startWrite(package.c_str(), package.length(), false); /* write packet */
+  delay(500);
   radio.startListening();
-}
-
-void loop() {
-  routePackage();
-  delay(5000);
+  delay(1000);
 }

@@ -1,7 +1,7 @@
 #include <SPI.h>
 #include <RF24.h>
 
-String radioId = "P2"; /* Identifies node2 */
+String radioId = "P2"; /* Identifies P1 */
 String target = "P1"; /* Identifies the target */
 String protocolId = "CAP"; /* Identifies the protocol called CAP - Controlled Access Protocol */
 char response[64];
@@ -11,39 +11,31 @@ const uint64_t pipes[2] = { 0xF0F0F0F0D2LL, 0xF0F0F0F0E1LL };
 
 String selectedCard, selectedTip;
 
-/*
-   Build a package with origin `radioId` and a `target`,
-   where a request will be taken through a protocol `protocolId`
-*/
-String buildPackage(String request, String target) {
-  return radioId + target + request + protocolId ;
-}
+void setup() {
+  Serial.begin(115200);
 
-/*
-   Radio sends a packet
-*/
-void sendPackage(String package) {
-  radio.stopListening(); /* Stop listening, then messages can be sent */
-
-  Serial.print("**** P2 is sending the packet: ");
-  Serial.println(package);
-  delay(500);
-
-  radio.startWrite(package.c_str(), package.length(), false); /* write packet */
-  delay(500);
+  radio.begin();
+  radio.setPALevel(RF24_PA_LOW);
+  radio.setAutoAck(false);
+  radio.setChannel(1);
+  radio.openWritingPipe(pipes[0]);
+  radio.openReadingPipe(1, pipes[1]);
   radio.startListening();
-  delay(1000);
+}
+
+void loop() {
+  managePackets();
+  delay(5000);
 }
 
 /*
-   Checks if it has packets to route, if so,
-   forwards them to the destination
+   Manages the received packets
 */
-void routePackage() {
+void managePackets() {
   radio.startListening();
   delay(100);
 
-  while (radio.available()) { /* Verifies whether there are bytes available to be read */
+  while (radio.available()) { /* Checks whether there are bytes available to be read */
     radio.read(&response, sizeof(response)); /* Then, read the available payload */
   }
 
@@ -55,7 +47,7 @@ void routePackage() {
 
     if (formattedResponse.startsWith("AP") && t.compareTo(radioId) == 0) {
       String message = formattedResponse.substring(4, formattedResponse.length() - 3); // Extract the message of the package
-
+      
       if (message.compareTo("st") == 0) { // If receives the message to start, this player select a card
         Serial.println("**** Select a card between 1 and 3: ");
         while (Serial.available() == 0) {}
@@ -68,11 +60,11 @@ void routePackage() {
 
         checkForInterference();
         sendPackage(package);
-      } else if (message.compareTo("nt") == 0) {
+      } else if (message.compareTo("nt") == 0) { // If receives the new tip message, this player select a tip
         String score = message.substring(2, message.length());
         Serial.print("**** Score: ");
         Serial.println(score);
-
+        
         Serial.print("**** Select a tip between 1 and 4: ");
         while (Serial.available() == 0) {}
 
@@ -114,6 +106,14 @@ void routePackage() {
 }
 
 /*
+   Build a package with origin `radioId` and a `target`,
+   where a content will be taken through a protocol `protocolId`
+*/
+String buildPackage(String content, String target) {
+  return radioId + target + content + protocolId;
+}
+
+/*
    Check for interference in the channel
 */
 void checkForInterference() {
@@ -124,19 +124,18 @@ void checkForInterference() {
   } while (radio.testCarrier());
 }
 
-void setup() {
-  Serial.begin(115200);
+/*
+   Radio sends a packet
+*/
+void sendPackage(String package) {
+  radio.stopListening(); /* Stop listening, then messages can be sent */
 
-  radio.begin();
-  radio.setPALevel(RF24_PA_LOW);
-  radio.setAutoAck(false);
-  radio.setChannel(1);
-  radio.openWritingPipe(pipes[0]);
-  radio.openReadingPipe(1, pipes[1]);
+  Serial.print("**** P2 is sending the packet: ");
+  Serial.println(package);
+  delay(500);
+
+  radio.startWrite(package.c_str(), package.length(), false); /* write packet */
+  delay(500);
   radio.startListening();
-}
-
-void loop() {
-  routePackage();
-  delay(5000);
+  delay(1000);
 }
