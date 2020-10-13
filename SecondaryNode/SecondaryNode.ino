@@ -4,7 +4,7 @@
 String radioId = "P2"; /* Identifies node2 */
 String target = "P1"; /* Identifies the target */
 String protocolId = "CAP"; /* Identifies the protocol called CAP - Controlled Access Protocol */
-char response[32];
+char response[64];
 
 RF24 radio(7, 8);
 const uint64_t pipes[2] = { 0xF0F0F0F0D2LL, 0xF0F0F0F0E1LL };
@@ -24,15 +24,15 @@ String buildPackage(String request, String target) {
 */
 void sendPackage(String package) {
   radio.stopListening(); /* Stop listening, then messages can be sent */
-  delay(1000);
-  Serial.print("**** P2 is sending the packet: ****");
-  delay(1000);
+
+  Serial.print("**** P2 is sending the packet: ");
   Serial.println(package);
-  delay(1000);
+  delay(500);
 
   radio.startWrite(package.c_str(), package.length(), false); /* write packet */
-  delay(100);
+  delay(500);
   radio.startListening();
+  delay(1000);
 }
 
 /*
@@ -46,43 +46,65 @@ void routePackage() {
   while (radio.available()) { /* Verifies whether there are bytes available to be read */
     radio.read(&response, sizeof(response)); /* Then, read the available payload */
   }
-  delay(1000);
 
   String formattedResponse = String(response);
   String package;
 
   if (formattedResponse.endsWith(protocolId)) {
-    if (formattedResponse.startsWith("AP")) {
-      String message = formattedResponse.substring(4, formattedResponse.length() - 2); // Extract the message of the package
+    String t = formattedResponse.substring(2, 4); // Extract the target
+
+    if (formattedResponse.startsWith("AP") && t.compareTo(radioId) == 0) {
+      String message = formattedResponse.substring(4, formattedResponse.length() - 3); // Extract the message of the package
 
       if (message.compareTo("st") == 0) { // If receives the message to start, this player select a card
-        Serial.println("**** Select a card between 1 and 5: ");
-        int index = Serial.read();
-        selectedCard = "c" + String(index - 1);
+        Serial.println("**** Select a card between 1 and 3: ");
+        while (Serial.available() == 0) {}
+
+        String index = Serial.readString();
+        Serial.println(index);
+
+        selectedCard = "c" + String(index.toInt() - 1);
         package = buildPackage(selectedCard, target);
+
+        checkForInterference();
+        sendPackage(package);
       } else if (message.compareTo("nt") == 0) {
-        Serial.println("**** Select a tip between 1 and 4: ");
-        int index = Serial.read();
-        selectedTip = "t" + String(index - 1);
+        String score = message.substring(2, message.length());
+        Serial.print("**** Score: ");
+        Serial.println(score);
+
+        Serial.print("**** Select a tip between 1 and 4: ");
+        while (Serial.available() == 0) {}
+
+        String index = Serial.readString();
+        Serial.println(index);
+
+        selectedTip = "t" + String(index.toInt());
         package = buildPackage(selectedTip, target);
-      } else if (message.startsWith("0")) {
-        String tip = formattedResponse.substring(1, formattedResponse.length() - 1); // Extract the tip text
+
+        checkForInterference();
+        sendPackage(package);
+      } else if (message.startsWith("0")) { // In this case, a tip will be display
+        String tip = message.substring(1, message.length()); // Extract the tip text
         Serial.print("**** Tip: ");
         Serial.println(tip);
         delay(1000);
+
         Serial.println("**** Who is the person? ****");
+        while (Serial.available() == 0) {}
+
         String answer = Serial.readString();
-        package = buildPackage(answer, target);
-      } else if (message.compareTo("nt") == 0) {
+        answer.replace("\n", "");
+        package = buildPackage("1" + answer, target);
+
+        checkForInterference();
+        sendPackage(package);
+      } else if (message.compareTo("yw") == 0) {
         Serial.println("**** YOOOOU WIIIIIN! ****");
       }
-
-      checkForInterference();
-      sendPackage(package);
     } else {
-      Serial.print("**** Received Packet ****");
-      delay(1000);
-      Serial.println(response);
+      Serial.print("**** The packet will be discarted: ");
+      Serial.println(formattedResponse);
       delay(1000);
     }
   } else {
@@ -97,7 +119,7 @@ void routePackage() {
 void checkForInterference() {
   do {
     radio.startListening();
-    delay(128);
+    delay(500);
     radio.stopListening();
   } while (radio.testCarrier());
 }

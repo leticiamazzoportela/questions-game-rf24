@@ -4,13 +4,42 @@
 String radioId = "AP"; /* Identifies Access Point */
 String players[2] = {"P1", "P2"}; /* Identifies the players */
 String protocolId = "CAP"; /* Identifies the protocol called CAP - Controlled Access Protocol */
-char response[32];
+char response[64];
 
 RF24 radio(7, 8);
 const uint64_t pipes[2] = { 0xF0F0F0F0D2LL, 0xF0F0F0F0E1LL };
 
-int p1Score = -1, p2Score = -1, finish = 11, numberOfTips = 0;
+int p1Score = 0, p2Score = 0, finish = 11, numberOfTips = 0;
 String playerWithCard = players[0], selectedCard, selectedTip;
+//struct card {
+//  String person;
+//  String tipA;
+//  String tipB;
+//  String tipC;
+//  String tipD;
+//} cards[] = {
+//  {
+//    "Ada Lovelace",
+//    "Sou considerada a primeira programadora da historia",
+//    "Nasci em dezembro de 1815",
+//    "Tambem fui matematica e escritora",
+//    "Trabalhei com Charles Babbage"
+//  },
+//  {
+//    "Radia Perlman",
+//    "Criei o protocolo STP",
+//    "Já fui chamada de mae da internet",
+//    "Criei o protocolo TRILL",
+//    "Recebi o premio National Inventors Hall of Fame em 2016"
+//  },
+//  {
+//    "Grace Hopper",
+//    "Criei o primeiro compilador",
+//    "Contribuí para a criação da linguagem Cobol",
+//    "Graças a mim, o termo bug se popularizou",
+//    "Fui analista de sistemas  da marinha dos EUA"
+//  },
+
 struct card {
   String person;
   String tipA;
@@ -19,39 +48,25 @@ struct card {
   String tipD;
 } cards[] = {
   {
-    "Ada Lovelace",
-    "Sou considerada a primeira programadora da história",
-    "Nasci em dezembro de 1815",
-    "Também fui matemática e escritora",
-    "Trabalhei com Charles Babbage"
+    "Ad",
+    "S",
+    "N",
+    "T",
+    "Tr"
   },
   {
-    "Alan Turing",
-    "Trabalhei para a inteligência britânica na Segunda Guerra",
-    "Fui uma grande influência da Ciência da Computação",
-    "Projetei a máquina de Turing",
-    "Nasci em junho de 1912"
+    "Ra",
+    "C",
+    "J",
+    "C",
+    "R"
   },
   {
-    "Radia Perlman",
-    "Criei o protocolo STP",
-    "Já fui chamada de mãe da internet",
-    "Criei o protocolo TRILL",
-    "Recebi o prêmio National Inventors Hall of Fame em 2016"
-  },
-  {
-    "Bill gates",
-    "Sou um das pessoas mais ricas do mundo",
-    "Fundei uma famosa empresa de software em parceria com Paul Allen",
-    "Criei uma fundação de caridade com minha esposa",
-    "Estudei em Harvard"
-  },
-  {
-    "Grace Hopper",
-    "Criei o primeiro compilador",
-    "Contribuí para a criação da linguagem Cobol",
-    "Graças a mim, o termo bug se popularizou",
-    "Fui analista de sistemas  da marinha dos EUA"
+    "Gr",
+    "Cr",
+    "C",
+    "G",
+    "F"
   },
 };
 
@@ -69,14 +84,14 @@ String buildPackage(String request, String target) {
 void sendPackage(String package) {
   radio.stopListening(); /* Stop listening, then messages can be sent */
 
-  Serial.print("AP is sending the packet: ");
-  delay(100);
+  Serial.print("**** AP is sending the packet: ");
   Serial.println(package);
-  delay(1000);
+  delay(500);
 
   radio.startWrite(package.c_str(), package.length(), false); /* write packet */
-  delay(100);
+  delay(500);
   radio.startListening();
+  delay(5000);
 }
 
 /*
@@ -87,25 +102,30 @@ void routePackage() {
   while (radio.available()) { /* Checks whether there are bytes available to be read */
     radio.read(&response, sizeof(response)); /* Then, read the available payload */
   }
-  delay(1000);
+  delay(500);
 
   String formattedResponse = String(response);
   String package = response;
   String answeringPlayer;
 
+  Serial.println(p1Score);
+  Serial.println(p2Score);
+
   if (playerWithCard == players[0]) {
-        answeringPlayer = players[1];
-      } else {
-        answeringPlayer = players[0];
-      }
+    answeringPlayer = players[1];
+  } else {
+    answeringPlayer = players[0];
+  }
 
   if (formattedResponse.endsWith(protocolId)) {
     String message = formattedResponse.substring(4, formattedResponse.length() - 2); // Extract the message of the package
 
     if (message.startsWith("c")) { // A player select a card with tips
       selectedCard = message.substring(message.length() - 1);
+      package = buildPackage("nt", answeringPlayer);
+      sendPackage(package);
     } else if (message.startsWith("t")) { // A player select a tip
-      String index = message.substring(message.length() - 1);
+      String index = message.substring(message.length() - 2, message.length() - 1);
 
       if (index == "1") {
         selectedTip = cards[selectedCard.toInt()].tipA;
@@ -113,30 +133,32 @@ void routePackage() {
         selectedTip == cards[selectedCard.toInt()].tipB;
       } else if (index == "3") {
         selectedTip = cards[selectedCard.toInt()].tipC;
-       } else if (index == "4") {
-        selectedTip= cards[selectedCard.toInt()].tipD;
+      } else if (index == "4") {
+        selectedTip = cards[selectedCard.toInt()].tipD;
       }
 
       numberOfTips += 1;
       package = buildPackage("0" + selectedTip, answeringPlayer);
-    } else if (message.startsWith("a")) { // A player sends the answer
-      String answer = formattedResponse.substring(1, formattedResponse.length() - 1); // Extract the answer
-
-      if (answer.compareTo(selectedCard) == 0) { // If it is the correct answer
+      sendPackage(package);
+    } else if (message.startsWith("1")) { // A player sends the answer
+      String answer = message.substring(1, message.length() - 1); // Extract the answer
+       
+      if (answer.compareTo(cards[selectedCard.toInt()].person) == 0) { // If it is the correct answer
         if (answeringPlayer == players[0]) { // The answering player is the one who scores
           p1Score += (4 - numberOfTips);
         } else {
           p2Score += (4 - numberOfTips);
         }
 
-        if (p1Score == finish) {
+        if (p1Score >= finish) {
           package = buildPackage("yw", players[0]);
-        } else if (p2Score == finish) {
+        } else if (p2Score >= finish) {
           package = buildPackage("yw", players[1]);
         } else {
           playerWithCard = answeringPlayer; // Changes the player with card
           package = buildPackage("st", playerWithCard);
         }
+        sendPackage(package);
       } else { // If it not is the correct answer
         if (numberOfTips > 4) {
           if (playerWithCard == players[0]) { // The player with card is the one who scores
@@ -144,22 +166,30 @@ void routePackage() {
           } else {
             p2Score += 4;
           }
-        
-          if (p1Score == finish) {
+
+          if (p1Score >= finish) {
             package = buildPackage("yw", players[0]);
-          } else if (p2Score == finish) {
+          } else if (p2Score >= finish) {
             package = buildPackage("yw", players[1]);
           } else {
             playerWithCard = answeringPlayer; // Changes the player with card
             package = buildPackage("st", playerWithCard);
           }
+          sendPackage(package);
         } else {
-          package = buildPackage("nt", answeringPlayer);
+          String score = "nt";
+
+          if (answeringPlayer == players[0]) {
+            score += p1Score;
+          } else {
+            score += p2Score;
+          }
+          
+          package = buildPackage(score, answeringPlayer);
+          sendPackage(package);
         }
       }
     }
-
-    sendPackage(package);
   } else {
     Serial.println("**** The received packet is from another network ****");
   }
@@ -174,7 +204,7 @@ bool hasReceivedPackets() {
   unsigned long timer = millis();
 
   while (!radio.available()) {
-    if ((millis() - timer) > 5000) { /* Checks for a while that no package has arrived */
+    if ((millis() - timer) > 15000) { /* Checks for a while that no package has arrived */
       Serial.println("**** Timeout: No packets to route ****");
       return false;
     }
@@ -189,7 +219,7 @@ bool hasReceivedPackets() {
 void checkForInterference() {
   do {
     radio.startListening();
-    delay(128);
+    delay(500);
     radio.stopListening();
   } while (radio.testCarrier());
 }
@@ -198,34 +228,26 @@ void checkForInterference() {
    Manage the communication network between AP and players
 */
 void manageNetwork() {
-//  Serial.println("**** Welcome to the game 4 QUESTIONS! ****");
-//  Serial.println("** You have 4 chances to guess the person **");
+  // Try sends the token 5 times
+  for (int retry = 0; retry < 15; retry++) {
+    Serial.print("\n**** Attempt nº: ");
+    Serial.println(retry);
+    delay(1000);
 
-  for (int no = 0; no < 2; no++) {
-    Serial.print(players[no]);
-    Serial.println(" It's your turn");
-    playerWithCard  = players[no];
-    String package = buildPackage("st", players[no]); // Sends to player the start token (st)
-    
-    // Try sends the token 5 times
-    for (int retry = 0; retry < 5; retry++) {
-      Serial.print("\n**** Attempt nº: ");
-      Serial.println(retry);
-      delay(1000);
-
-      if (package.startsWith("AP")) {
-        Serial.println("a");
-      }
-
+    if (hasReceivedPackets()) {
+      routePackage();
+      break;
+    } else {
+      Serial.print(players[0]);
+      Serial.println(" It's your turn");
+      playerWithCard  = players[0];
+      String package = buildPackage("st", players[0]); // Sends to player the start token (st)
       checkForInterference();
       sendPackage(package);
-
-      if (hasReceivedPackets()) {
-        routePackage();
-        break;
-      }
+      break;
     }
   }
+  //  }
 }
 
 void setup() {
