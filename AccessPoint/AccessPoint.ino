@@ -10,7 +10,7 @@ RF24 radio(7, 8);
 const uint64_t pipes[2] = { 0xF0F0F0F0D2LL, 0xF0F0F0F0E1LL };
 
 int p1Score = 0, p2Score = 0, finish = 11, numberOfTips = 0;
-String playerWithCard = players[0], selectedCard, selectedTip;
+String playerWithCard = players[0], selectedCard, selectedTip, sc;
 //struct card {
 //  String person;
 //  String tipA;
@@ -179,18 +179,21 @@ void routePackets() {
 
     if (message.startsWith("c")) { // A player select a card with tips
       selectedCard = message.substring(message.length() - 1);
-      package = buildPackage("nt", answeringPlayer);
+      String cardPacket = "ca" + selectedCard;
+      package = buildPackage("nt" + cardPacket, answeringPlayer); // Identifies new tip and the card id
+
       sendPackage(package);
     } else if (message.startsWith("t")) { // A player select a tip
       String index = message.substring(message.length() - 2, message.length() - 1);
-      selectedTip = getTipText(index, selectedCard);
+      sc = message.substring(message.length() - 2, message.length() - 1); //ARRUMAR INDEX
+      selectedTip = getTipText(index, sc);
 
       numberOfTips += 1;
       package = buildPackage("0" + selectedTip, answeringPlayer);
       sendPackage(package);
     } else if (message.startsWith("1")) { // A player sends the answer
       String answer = message.substring(1, message.length() - 1); // Extract the answer
-      String person = cards[selectedCard.toInt()].person;
+      String person = cards[sc.toInt()].person;
 
       if (answer.compareTo(person) == 0) { // If it is the correct answer
         if (answeringPlayer == players[0]) { // The answering player is the one who scores
@@ -210,7 +213,7 @@ void routePackets() {
 
           getNextStep(package);
         } else {
-          String score = "nt";
+          String score = "nt" + "ca" + selectedCard; // Identifies new tip and the card id
 
           if (answeringPlayer == players[0]) {
             score += p1Score;

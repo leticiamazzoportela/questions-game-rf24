@@ -61,9 +61,10 @@ void managePackets() {
         checkForInterference();
         sendPackage(package);
       } else if (message.compareTo("nt") == 0) { // If receives the new tip message, this player select a tip
-        String score = message.substring(2, message.length());
-        Serial.print("**** Score: ");
-        Serial.println(score);
+        // String score = message.substring(2, message.length());
+        // Serial.print("**** Score: ");
+        // Serial.println(score);
+        String sc = message.substring(2, message.length() - 2); //VERIFICAR INDEX
         
         Serial.print("**** Select a tip between 1 and 4: ");
         while (Serial.available() == 0) {}
@@ -72,7 +73,7 @@ void managePackets() {
         Serial.println(index);
 
         selectedTip = "t" + String(index.toInt());
-        package = buildPackage(selectedTip, target);
+        package = buildPackage(selectedTip + sc, target);
 
         checkForInterference();
         sendPackage(package);
