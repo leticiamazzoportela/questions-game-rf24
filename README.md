@@ -17,9 +17,9 @@ Foram utilizadas 3 placas de rádio baseadas no Arduino Nano, sendo que:
   * *cnumero*: Indica que um jogador escolheu uma carta, o *numero* corresponde ao número da carta;
   * *nt* (new tip): Pacote enviado para um jogador para ele saber que pode enviar uma dica;
   * *tnumero*: Indica que um jogador escolheu uma dica, o *numero* corresponde ao número da dica;
-  <!-- * *0mensgaem*: Indica que  -->
+  * *0mensagem*: Indica que uma dica deve ser exibida;
   * *1mensagem*: Indica que um jogador enviou a resposta para uma pergunta, onde *mensagem* corresponde à resposta;
-  <!-- * *yw*: -->
+  * *srnumero*: Indica que uma pontuação deve ser exibida, onde *numero* é o valor da pontuação do jogador.
 * Um pacote tem o seguinte formato:
   * origin + target + content * protocol
 * Assim, considerando as sinalizações mencionadas anteriormente, um exemplo de pacote seria:

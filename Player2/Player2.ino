@@ -40,15 +40,14 @@ void managePackets() {
   }
 
   String formattedResponse = String(response);
-  String package;
+  String packet;
 
   if (formattedResponse.endsWith(protocolId)) {
     String t = formattedResponse.substring(2, 4); // Extract the target
 
     if (formattedResponse.startsWith("AP") && t.compareTo(radioId) == 0) {
-      String message = formattedResponse.substring(4, formattedResponse.length() - 3); // Extract the message of the package
-      Serial.println("recebiii");
-      Serial.println(message);
+      String message = formattedResponse.substring(4, formattedResponse.length() - 3); // Extract the message of the packet
+      
       if (message.compareTo("st") == 0) { // If receives the message to start, this player select a card
         Serial.println("**** Select a card between 1 and 3: ");
         while (Serial.available() == 0) {}
@@ -57,15 +56,12 @@ void managePackets() {
         Serial.println(index);
 
         selectedCard = "c" + String(index.toInt() - 1);
-        package = buildPackage(selectedCard, target);
+        packet = buildPacket(selectedCard, target);
 
         checkForInterference();
-        sendPackage(package);
+        sendPacket(packet);
       } else if (message.startsWith("nt")) { // If receives the new tip message, this player select a tip
-        Serial.println("sc recebido");
-        Serial.println(message.length() - 1);
-        Serial.println();
-        String sc = "ca" + message.substring(message.length() -1);
+        String sc = "ca" + message.substring(message.length() - 1);
 
         Serial.print("**** Select a tip between 1 and 4: ");
         while (Serial.available() == 0) {}
@@ -74,10 +70,10 @@ void managePackets() {
         Serial.println(index);
 
         selectedTip = "t" + String(index.toInt());
-        package = buildPackage(selectedTip + sc, target);
+        packet = buildPacket(selectedTip + sc, target);
 
         checkForInterference();
-        sendPackage(package);
+        sendPacket(packet);
       } else if (message.startsWith("0")) { // In this case, a tip will be display
         String tip = message.substring(1, message.length()); // Extract the tip text
         Serial.print("**** Tip: ");
@@ -89,12 +85,23 @@ void managePackets() {
 
         String answer = Serial.readString();
         answer.replace("\n", "");
-        package = buildPackage("1" + answer, target);
+        packet = buildPacket("1" + answer, target);
 
         checkForInterference();
-        sendPackage(package);
-      } else if (message.compareTo("yw") == 0) {
-        Serial.println("**** YOOOOU WIIIIIN! ****");
+        sendPacket(packet);
+      } else if (message.startsWith("sr")) { // The score will be display
+        String score;
+
+        if (message.length() < 4) {
+        score = message.substring(message.length() - 1);
+        } else {
+          score = message.substring(message.length() - 2, message.length() - 1);
+        }
+
+        Serial.print("**** Your score: ");
+        Serial.println(score);
+      } else {
+        Serial.println(message);
       }
     } else {
       Serial.print("**** The packet will be discarted: ");
@@ -108,10 +115,10 @@ void managePackets() {
 }
 
 /*
-   Build a package with origin `radioId` and a `target`,
+   Build a packet with origin `radioId` and a `target`,
    where a content will be taken through a protocol `protocolId`
 */
-String buildPackage(String content, String target) {
+String buildPacket(String content, String target) {
   return radioId + target + content + protocolId;
 }
 
@@ -129,14 +136,14 @@ void checkForInterference() {
 /*
    Radio sends a packet
 */
-void sendPackage(String package) {
+void sendPacket(String packet) {
   radio.stopListening(); /* Stop listening, then messages can be sent */
 
   Serial.print("**** P2 is sending the packet: ");
-  Serial.println(package);
+  Serial.println(packet);
   delay(500);
 
-  radio.startWrite(package.c_str(), package.length(), false); /* write packet */
+  radio.startWrite(packet.c_str(), packet.length(), false); /* write packet */
   delay(500);
   radio.startListening();
   delay(1000);

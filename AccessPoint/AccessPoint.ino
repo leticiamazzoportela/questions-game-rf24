@@ -9,7 +9,7 @@ char response[64];
 RF24 radio(7, 8);
 const uint64_t pipes[2] = { 0xF0F0F0F0D2LL, 0xF0F0F0F0E1LL };
 
-int p1Score = 0, p2Score = 0, finish = 11, numberOfTips = 0;
+int p1Score = 0, p2Score = 0, finish = 12, numberOfTips = 0;
 String playerWithCard = players[0], selectedCard, selectedTip, sc;
 //struct card {
 //  String person;
@@ -101,9 +101,9 @@ void manageNetwork() {
       break;
     } else {
       playerWithCard = players[0];
-      String package = buildPackage("st", players[0]); // Sends to player the start token (st)
+      String packet = buildPacket("st", players[0]); // Sends to player the start token (st)
       checkForInterference();
-      sendPackage(package);
+      sendPacket(packet);
       break;
     }
   }
@@ -118,7 +118,7 @@ bool hasReceivedPackets() {
   unsigned long timer = millis();
 
   while (!radio.available()) {
-    if ((millis() - timer) > 15000) { /* Checks for a while that no package has arrived */
+    if ((millis() - timer) > 15000) { /* Checks for a while that no packet has arrived */
       Serial.println("**** Timeout: No packets to route ****");
       return false;
     }
@@ -146,17 +146,28 @@ String getTipText(String index, String selectedCard) {
   return cards[selectedCard.toInt()].tipD;
 }
 
-void getNextStep(String package) {
+void routeWinnerLosePackets(String winner, String loser) {
+  numberOfTips = 0;
+
+  String winPacket = buildPacket("YOOOOU WIIIN!!!", winner);
+  sendPacket(winPacket);
+
+  String losePacket = buildPacket("YOOOOU LOOOSE =(", loser);
+  sendPacket(losePacket);
+}
+
+void getNextStep(String packet) {
   if (p1Score >= finish) {
-    package = buildPackage("yw", players[0]);
+    routeWinnerLosePackets(players[0], players[1]);
   } else if (p2Score >= finish) {
-    package = buildPackage("yw", players[1]);
+    routeWinnerLosePackets(players[1], players[0]);
   } else {
     String answeringPlayer = getAnsweringPlayer();
     playerWithCard = answeringPlayer; // Changes the player with card
-    package = buildPackage("st", playerWithCard);
+    numberOfTips = 0;
+    packet = buildPacket("st", playerWithCard);
+    sendPacket(packet);
   }
-  sendPackage(package);
 }
 
 /*
@@ -171,47 +182,61 @@ void routePackets() {
   delay(500);
 
   String formattedResponse = String(response);
-  String package = response;
+  String packet = response;
   String answeringPlayer = getAnsweringPlayer();
 
   if (formattedResponse.endsWith(protocolId)) {
-    String message = formattedResponse.substring(4, formattedResponse.length() - 3); // Extract the message of the package
+    String message = formattedResponse.substring(4, formattedResponse.length() - 3); // Extract the message of the packet
 
     if (message.startsWith("c")) { // A player select a card with tips
       selectedCard = message.substring(message.length() - 1);
       String cardPacket = "ca" + selectedCard;
-      package = buildPackage("nt" + cardPacket, answeringPlayer); // Identifies new tip and the card id
+      packet = buildPacket("nt" + cardPacket, answeringPlayer); // Identifies new tip and the card id
 
-      sendPackage(package);
+      sendPacket(packet);
     } else if (message.startsWith("t")) { // A player select a tip
-      String index = message.substring(message.length() - 4);
+      String index = message.substring(message.length() - 4, message.length() - 3);
       sc = message.substring(message.length() - 1);
       selectedTip = getTipText(index, sc);
 
       numberOfTips += 1;
-      package = buildPackage("0" + selectedTip, answeringPlayer);
-      sendPackage(package);
+      packet = buildPacket("0" + selectedTip, answeringPlayer);
+      sendPacket(packet);
     } else if (message.startsWith("1")) { // A player sends the answer
-      String answer = message.substring(1, message.length() - 1); // Extract the answer
+      String answer = message.substring(1, message.length()); // Extract the answer
       String person = cards[sc.toInt()].person;
 
       if (answer.compareTo(person) == 0) { // If it is the correct answer
+        String content = "sr";
+
         if (answeringPlayer == players[0]) { // The answering player is the one who scores
-          p1Score += (4 - numberOfTips);
+          p1Score += (5 - numberOfTips);
+          content += p1Score;
         } else {
-          p2Score += (4 - numberOfTips);
+          p2Score += (5 - numberOfTips);
+          content += p2Score;
         }
 
-        getNextStep(package);
+        String scorePacket = buildPacket(content, answeringPlayer);
+        sendPacket(scorePacket); // Send to answering player your score
+
+        getNextStep(packet);
       } else { // If it not is the correct answer
         if (numberOfTips > 4) {
+          String content = "sr";
+
           if (playerWithCard == players[0]) { // The player with card is the one who scores
             p1Score += 4;
+            content += p1Score;
           } else {
             p2Score += 4;
+            content += p1Score;
           }
 
-          getNextStep(package);
+          String scorePacket = buildPacket(content, answeringPlayer);
+          sendPacket(scorePacket); // Send to player with card your score
+
+          getNextStep(packet);
         } else {
           String score = "ntca" + selectedCard; // Identifies new tip and the card id
 
@@ -221,8 +246,8 @@ void routePackets() {
             score += p2Score;
           }
 
-          package = buildPackage(score, answeringPlayer);
-          sendPackage(package);
+          packet = buildPacket(score, answeringPlayer);
+          sendPacket(packet);
         }
       }
     }
@@ -232,24 +257,24 @@ void routePackets() {
 }
 
 /*
-   Build a package with origin `radioId` and a `target`,
+   Build a packet with origin `radioId` and a `target`,
    where a request will be taken through a protocol `protocolId`
 */
-String buildPackage(String request, String target) {
+String buildPacket(String request, String target) {
   return radioId + target + request + protocolId;
 }
 
 /*
    Radio sends a packet
 */
-void sendPackage(String package) {
+void sendPacket(String packet) {
   radio.stopListening(); /* Stop listening, then messages can be sent */
 
   Serial.print("**** AP is sending the packet: ");
-  Serial.println(package);
+  Serial.println(packet);
   delay(500);
 
-  radio.startWrite(package.c_str(), package.length(), false); /* write packet */
+  radio.startWrite(packet.c_str(), packet.length(), false); /* write packet */
   delay(500);
   radio.startListening();
   delay(5000);
