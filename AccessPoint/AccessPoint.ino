@@ -175,7 +175,7 @@ void routePackets() {
   String answeringPlayer = getAnsweringPlayer();
 
   if (formattedResponse.endsWith(protocolId)) {
-    String message = formattedResponse.substring(4, formattedResponse.length() - 2); // Extract the message of the package
+    String message = formattedResponse.substring(4, formattedResponse.length() - 3); // Extract the message of the package
 
     if (message.startsWith("c")) { // A player select a card with tips
       selectedCard = message.substring(message.length() - 1);
@@ -184,8 +184,8 @@ void routePackets() {
 
       sendPackage(package);
     } else if (message.startsWith("t")) { // A player select a tip
-      String index = message.substring(message.length() - 2, message.length() - 1);
-      sc = message.substring(message.length() - 2, message.length() - 1); //ARRUMAR INDEX
+      String index = message.substring(message.length() - 4);
+      sc = message.substring(message.length() - 1);
       selectedTip = getTipText(index, sc);
 
       numberOfTips += 1;
@@ -213,7 +213,7 @@ void routePackets() {
 
           getNextStep(package);
         } else {
-          String score = "nt" + "ca" + selectedCard; // Identifies new tip and the card id
+          String score = "ntca" + selectedCard; // Identifies new tip and the card id
 
           if (answeringPlayer == players[0]) {
             score += p1Score;

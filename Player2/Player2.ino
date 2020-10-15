@@ -47,7 +47,8 @@ void managePackets() {
 
     if (formattedResponse.startsWith("AP") && t.compareTo(radioId) == 0) {
       String message = formattedResponse.substring(4, formattedResponse.length() - 3); // Extract the message of the package
-      
+      Serial.println("recebiii");
+      Serial.println(message);
       if (message.compareTo("st") == 0) { // If receives the message to start, this player select a card
         Serial.println("**** Select a card between 1 and 3: ");
         while (Serial.available() == 0) {}
@@ -60,12 +61,12 @@ void managePackets() {
 
         checkForInterference();
         sendPackage(package);
-      } else if (message.compareTo("nt") == 0) { // If receives the new tip message, this player select a tip
-        // String score = message.substring(2, message.length());
-        // Serial.print("**** Score: ");
-        // Serial.println(score);
-        String sc = message.substring(2, message.length() - 2); //VERIFICAR INDEX
-        
+      } else if (message.startsWith("nt")) { // If receives the new tip message, this player select a tip
+        Serial.println("sc recebido");
+        Serial.println(message.length() - 1);
+        Serial.println();
+        String sc = "ca" + message.substring(message.length() -1);
+
         Serial.print("**** Select a tip between 1 and 4: ");
         while (Serial.available() == 0) {}
 
