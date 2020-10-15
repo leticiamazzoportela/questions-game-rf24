@@ -13,17 +13,17 @@ Foram utilizadas 3 placas de rádio baseadas no Arduino Nano, sendo que:
 * Um jogador não envia um pacote diretamente para outro jogador, como mencionado anteriormente, o pacote deve passar pelo AP e o AP encaminha o pacote para o destino;
 * A relação do protocolo com o jogo está documentada no código;
 * Podem ser enviados diferentes tipos de pacotes e cada um possui algumas sinalizações que podem ser interpretadas:
-  * *st* (start token): AP sinaliza para um jogador que ele pode começar escolhendo uma carta.
-  * *cnumero*: Indica que um jogador escolheu uma carta, o *numero* corresponde ao número da carta;
-  * *nt* (new tip): Pacote enviado para um jogador para ele saber que pode enviar uma dica;
-  * *tnumero*: Indica que um jogador escolheu uma dica, o *numero* corresponde ao número da dica;
-  * *0mensagem*: Indica que uma dica deve ser exibida;
-  * *1mensagem*: Indica que um jogador enviou a resposta para uma pergunta, onde *mensagem* corresponde à resposta;
-  * *srnumero*: Indica que uma pontuação deve ser exibida, onde *numero* é o valor da pontuação do jogador.
+  * `st` *(start token)*: AP sinaliza para um jogador que ele pode começar escolhendo uma carta.
+  * `cnumero`: Indica que um jogador escolheu uma carta, o *numero* corresponde ao número da carta;
+  * `nt` *(new tip)*: Pacote enviado para um jogador para ele saber que pode enviar uma dica;
+  * `tnumero`: Indica que um jogador escolheu uma dica, o *numero* corresponde ao número da dica;
+  * `0mensagem`: Indica que uma dica deve ser exibida;
+  * `1mensagem`: Indica que um jogador enviou a resposta para uma pergunta, onde *mensagem* corresponde à resposta;
+  * `srnumero`: Indica que uma pontuação deve ser exibida, onde *numero* é o valor da pontuação do jogador.
 * Um pacote tem o seguinte formato:
-  * origin + target + content * protocol
+  * `origin + target + content + protocol`
 * Assim, considerando as sinalizações mencionadas anteriormente, um exemplo de pacote seria:
-  * P2P1t1ca1CAP: P2 solicita a P1 a dica 1 (t1) da carta 1 (ca1) por meio do protocolo CAP.
+  * `P2P1t1ca1CAP`: P2 solicita a P1 a dica 1 (t1) da carta 1 (ca1) por meio do protocolo CAP.
 
 ### Regras do jogo
 
