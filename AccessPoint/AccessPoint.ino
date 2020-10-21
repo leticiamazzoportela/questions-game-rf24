@@ -111,18 +111,19 @@ void routeWinnerLosePackets(String winner, String loser) {
 
 void getNextStep(String packet) {
   int finish = 9;
-  
+
   if (p1Score >= finish) {
     routeWinnerLosePackets(players[0], players[1]);
   } else if (p2Score >= finish) {
     routeWinnerLosePackets(players[1], players[0]);
-  } else {
-    String answeringPlayer = getAnsweringPlayer();
-    playerWithCard = answeringPlayer; // Changes the player with card
-    numberOfTips = 0;
-    packet = buildPacket("st", playerWithCard);
-    sendPacket(packet);
   }
+
+  delay(2000);
+  String answeringPlayer = getAnsweringPlayer();
+  playerWithCard = answeringPlayer; // Changes the player with card
+  numberOfTips = 0;
+  packet = buildPacket("st", playerWithCard);
+  sendPacket(packet);
 }
 
 /*
@@ -141,7 +142,7 @@ void routePackets() {
 
   if (formattedResponse.endsWith(protocolId)) {
     String message = formattedResponse.substring(4, formattedResponse.length() - 3); // Extract the message of the packet
-    
+
     if (message.startsWith("c")) { // A player select a card with tips
       selectedCard = message.substring(message.length() - 1);
       String cardPacket = "ca" + selectedCard;
@@ -199,7 +200,7 @@ void routePackets() {
           getNextStep(packet);
         } else {
           String score = "ntca" + sc; // Identifies new tip and the card id
-          
+
           if (answeringPlayer == players[0]) {
             score += p1Score;
           } else {
@@ -229,7 +230,7 @@ String buildPacket(String request, String target) {
 */
 void sendPacket(String packet) {
   checkForInterference(); // First, check for interference
-  
+
   radio.stopListening(); /* Stop listening, then messages can be sent */
 
   Serial.print("\n**** AP is sending the packet: ");
